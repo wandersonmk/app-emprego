@@ -1,6 +1,6 @@
 # App Emprego
 
-Aplicativo para conectar profissionais e clientes.
+Aplicativo para conectar profissionais e clientes de forma simples e eficiente.
 
 ## Atualização
 
@@ -14,6 +14,8 @@ Aplicativo para conectar profissionais e clientes.
 - Autenticação segura
 - Suporte para contas de cliente e profissional
 - Interface moderna e responsiva
+- Sistema de busca de profissionais
+- Avaliações e comentários
 
 ## Como executar
 
@@ -74,11 +76,10 @@ npm run dev
 
 ## Tecnologias
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
+- React + TypeScript
+- Supabase para backend
 - Tailwind CSS
+- Shadcn/ui para componentes
 
 ## How can I deploy this project?
 
