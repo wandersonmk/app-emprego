@@ -6,139 +6,110 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type Database = {
+export interface Database {
   public: {
     Tables: {
-      profiles: {
+      user_profiles: {
         Row: {
-          created_at: string
+          id: string
           email: string | null
-          id: string
+          name: string | null
+          user_type: 'client' | 'professional'
+          created_at: string
+          updated_at: string
         }
         Insert: {
-          created_at?: string
-          email?: string | null
           id: string
+          email?: string | null
+          name?: string | null
+          user_type?: 'client' | 'professional'
+          created_at?: string
+          updated_at?: string
         }
         Update: {
-          created_at?: string
+          id?: string
           email?: string | null
-          id?: string
+          name?: string | null
+          user_type?: 'client' | 'professional'
+          created_at?: string
+          updated_at?: string
         }
-        Relationships: []
-      }
-      service_proposals: {
-        Row: {
-          created_at: string | null
-          delivery_time: string
-          id: string
-          message: string | null
-          price: number
-          professional_id: string
-          service_id: string
-          status: Database["public"]["Enums"]["service_status"] | null
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          delivery_time: string
-          id?: string
-          message?: string | null
-          price: number
-          professional_id: string
-          service_id: string
-          status?: Database["public"]["Enums"]["service_status"] | null
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          delivery_time?: string
-          id?: string
-          message?: string | null
-          price?: number
-          professional_id?: string
-          service_id?: string
-          status?: Database["public"]["Enums"]["service_status"] | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "service_proposals_service_id_fkey"
-            columns: ["service_id"]
-            isOneToOne: false
-            referencedRelation: "service_requests"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       service_requests: {
         Row: {
-          budget: number
-          category: string
+          id: string
           client_id: string
-          created_at: string | null
+          title: string
+          description: string
+          category: string
+          budget: number
+          location: string
           delivery_date: string | null
-          description: string
-          id: string
-          location: string
-          status: Database["public"]["Enums"]["service_status"] | null
-          title: string
-          updated_at: string | null
-        }
-        Insert: {
-          budget: number
-          category: string
-          client_id: string
-          created_at?: string | null
-          delivery_date?: string | null
-          description: string
-          id?: string
-          location: string
-          status?: Database["public"]["Enums"]["service_status"] | null
-          title: string
-          updated_at?: string | null
-        }
-        Update: {
-          budget?: number
-          category?: string
-          client_id?: string
-          created_at?: string | null
-          delivery_date?: string | null
-          description?: string
-          id?: string
-          location?: string
-          status?: Database["public"]["Enums"]["service_status"] | null
-          title?: string
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      user_profiles: {
-        Row: {
+          status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
           created_at: string
-          email: string | null
-          id: string
-          name: string | null
-          updated_at: string | null
-          user_type: Database["public"]["Enums"]["user_type"]
+          updated_at: string
         }
         Insert: {
+          id?: string
+          client_id: string
+          title: string
+          description: string
+          category: string
+          budget: number
+          location: string
+          delivery_date?: string | null
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
           created_at?: string
-          email?: string | null
-          id: string
-          name?: string | null
-          updated_at?: string | null
-          user_type?: Database["public"]["Enums"]["user_type"]
+          updated_at?: string
         }
         Update: {
-          created_at?: string
-          email?: string | null
           id?: string
-          name?: string | null
-          updated_at?: string | null
-          user_type?: Database["public"]["Enums"]["user_type"]
+          client_id?: string
+          title?: string
+          description?: string
+          category?: string
+          budget?: number
+          location?: string
+          delivery_date?: string | null
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          created_at?: string
+          updated_at?: string
         }
-        Relationships: []
+      }
+      service_proposals: {
+        Row: {
+          id: string
+          service_id: string
+          professional_id: string
+          price: number
+          delivery_time: string
+          message: string | null
+          status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          service_id: string
+          professional_id: string
+          price: number
+          delivery_time: string
+          message?: string | null
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          service_id?: string
+          professional_id?: string
+          price?: number
+          delivery_time?: string
+          message?: string | null
+          status?: 'pending' | 'in_progress' | 'completed' | 'cancelled'
+          created_at?: string
+          updated_at?: string
+        }
       }
     }
     Views: {
@@ -148,11 +119,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      service_status: "pending" | "in_progress" | "completed" | "cancelled"
-      user_type: "client" | "professional"
-    }
-    CompositeTypes: {
-      [_ in never]: never
+      user_type: 'client' | 'professional'
+      service_status: 'pending' | 'in_progress' | 'completed' | 'cancelled'
     }
   }
 }

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,9 +12,27 @@ import {
   Bell,
   Briefcase,
   Clock,
-  PlusCircle
+  PlusCircle,
+  Home,
+  Trash2,
+  RefreshCw,
+  FileText
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"; // Corrigindo o caminho do import do AlertDialog
+
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface UserData {
   email: string;
@@ -29,13 +46,49 @@ interface Notification {
   read: boolean;
 }
 
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  budget: number;
+  location: string;
+  status: string;
+}
+
+interface DashboardMetrics {
+  totalServices: number;
+  totalProposals: number;
+  totalReviews: number;
+  totalMessages: number;
+}
+
+interface Activity {
+  id: string;
+  type: 'service_created' | 'service_updated' | 'proposal_received' | 'message_received';
+  title: string;
+  description: string;
+  created_at: string;
+  read: boolean;
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [userData, setUserData] = useState<UserData | null>(null);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [services, setServices] = useState<Service[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalServices: 0,
+    totalProposals: 0,
+    totalReviews: 0,
+    totalMessages: 0
+  });
 
   useEffect(() => {
     checkUser();
+    loadServices();
+    loadMetrics();
+    loadActivities();
   }, []);
 
   async function checkUser() {
@@ -64,6 +117,102 @@ export default function Dashboard() {
     } catch (error) {
       console.error("Erro ao verificar usuário:", error);
       navigate("/login");
+    }
+  }
+
+  async function loadServices() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from('service_requests')
+        .select('*')
+        .eq('client_id', session.user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setServices(data || []);
+    } catch (error) {
+      console.error("Erro ao carregar serviços:", error);
+      toast.error("Erro ao carregar serviços");
+    }
+  }
+
+  async function loadMetrics() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Contagem de serviços publicados
+      const { count: servicesCount, error: servicesError } = await supabase
+        .from('service_requests')
+        .select('*', { count: 'exact' })
+        .eq('client_id', session.user.id);
+
+      if (servicesError) {
+        console.error("Erro na contagem de serviços:", servicesError);
+        return;
+      }
+
+      // Por enquanto, vamos mostrar apenas os serviços
+      setMetrics({
+        totalServices: servicesCount || 0,
+        totalProposals: 0, // Implementaremos depois
+        totalReviews: 0,   // Implementaremos depois
+        totalMessages: 0    // Implementaremos depois
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao carregar métricas:", error);
+      toast.error("Erro ao carregar métricas do dashboard");
+    }
+  }
+
+  async function loadActivities() {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      // Buscar serviços recentes
+      const { data: recentServices, error: servicesError } = await supabase
+        .from('service_requests')
+        .select(`
+          id,
+          title,
+          created_at,
+          status,
+          budget,
+          location
+        `)
+        .eq('client_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (servicesError) {
+        console.error("Erro ao buscar serviços:", servicesError);
+        return;
+      }
+
+      // Formatar atividades de serviços
+      const serviceActivities: Activity[] = (recentServices || []).map(service => ({
+        id: service.id,
+        type: 'service_created',
+        title: 'Novo Serviço Publicado',
+        description: `${service.title} - ${formatCurrency(service.budget)} - ${service.location}`,
+        created_at: service.created_at,
+        read: true
+      }));
+
+      // Ordenar por data mais recente
+      const allActivities = [...serviceActivities].sort((a, b) => 
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      setActivities(allActivities);
+    } catch (error) {
+      console.error("Erro ao carregar atividades:", error);
+      toast.error("Erro ao carregar atividades recentes");
     }
   }
 
@@ -97,6 +246,55 @@ export default function Dashboard() {
     toast.info("Configurações em desenvolvimento");
   };
 
+  function formatCurrency(value: number) {
+    return `R$ ${value.toFixed(2)}`;
+  }
+
+  function formatActivityDate(dateString: string) {
+    try {
+      const date = new Date(dateString);
+      return format(date, "'Criado em' dd 'de' MMMM', às' HH:mm", {
+        locale: ptBR
+      });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return dateString; // Retorna a string original em caso de erro
+    }
+  }
+
+  function getActivityIcon(type: Activity['type']) {
+    switch (type) {
+      case 'service_created':
+        return <PlusCircle className="h-4 w-4 text-primary" />;
+      case 'service_updated':
+        return <RefreshCw className="h-4 w-4 text-blue-500" />;
+      case 'proposal_received':
+        return <FileText className="h-4 w-4 text-green-500" />;
+      case 'message_received':
+        return <MessageSquare className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Bell className="h-4 w-4 text-gray-500" />;
+    }
+  }
+
+  async function updateServiceStatus(serviceId: string, newStatus: string) {
+    try {
+      const { error } = await supabase
+        .from('service_requests')
+        .update({ status: newStatus })
+        .eq('id', serviceId);
+
+      if (error) throw error;
+      
+      // Recarregar atividades e serviços
+      loadActivities();
+      loadServices();
+    } catch (error) {
+      console.error("Erro ao atualizar status:", error);
+      toast.error("Erro ao atualizar status do serviço");
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -112,10 +310,20 @@ export default function Dashboard() {
               >
                 <Bell className="h-5 w-5 text-gray-600" />
               </Button>
-              <Button variant="outline" onClick={handleLogout}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sair
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => navigate("/")}
+                  title="Ir para página inicial"
+                >
+                  <Home className="h-5 w-5" />
+                </Button>
+                <Button variant="outline" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sair
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -174,7 +382,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Serviços Publicados</p>
-                    <p className="text-2xl font-semibold">0</p>
+                    <p className="text-2xl font-semibold">{metrics.totalServices}</p>
                   </div>
                 </div>
               </div>
@@ -186,7 +394,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Propostas Recebidas</p>
-                    <p className="text-2xl font-semibold">0</p>
+                    <p className="text-2xl font-semibold">{metrics.totalProposals}</p>
                   </div>
                 </div>
               </div>
@@ -200,7 +408,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Avaliações</p>
-                <p className="text-2xl font-semibold">0</p>
+                <p className="text-2xl font-semibold">{metrics.totalReviews}</p>
               </div>
             </div>
           </div>
@@ -212,7 +420,7 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-600">Mensagens</p>
-                <p className="text-2xl font-semibold">0</p>
+                <p className="text-2xl font-semibold">{metrics.totalMessages}</p>
               </div>
             </div>
           </div>
@@ -274,14 +482,84 @@ export default function Dashboard() {
 
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="text-lg font-semibold mb-4">
-              {userData?.user_type === 'professional' ? 'Oportunidades Recentes' : 'Propostas Recentes'}
+              {userData?.user_type === 'professional' ? 'Oportunidades Recentes' : 'Meus Serviços'}
             </h3>
-            <div className="space-y-4">
-              <p className="text-gray-600 text-center py-8">
-                {userData?.user_type === 'professional' 
-                  ? 'Nenhuma oportunidade disponível' 
-                  : 'Nenhuma proposta recebida'}
-              </p>
+            <div className="max-h-[500px] overflow-y-auto pr-2">
+              {services.length > 0 ? (
+                services.map((service) => (
+                  <div key={service.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{service.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          {service.description}
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {service.category}
+                          </span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            {formatCurrency(service.budget)}
+                          </span>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {service.location}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/servico/${service.id}`)}
+                        >
+                          Ver Detalhes
+                        </Button>
+
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteService(service.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Excluir
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Você ainda não publicou nenhum serviço.</p>
+                  <Button
+                    onClick={() => navigate("/publicar-servico")}
+                    variant="link"
+                    className="mt-2"
+                  >
+                    Clique aqui para publicar seu primeiro serviço
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -290,9 +568,31 @@ export default function Dashboard() {
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold mb-4">Atividade Recente</h3>
           <div className="space-y-4">
-            <p className="text-gray-600 text-center py-8">
-              Nenhuma atividade recente
-            </p>
+            {activities.length > 0 ? (
+              activities.map((activity) => (
+                <div
+                  key={activity.id}
+                  className="flex items-start gap-4 p-4 rounded-lg border"
+                >
+                  <div className="p-2 rounded-full bg-primary/10">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{activity.title}</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {activity.description}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formatActivityDate(activity.created_at)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-gray-600 text-center py-8">
+                Nenhuma atividade recente
+              </p>
+            )}
           </div>
         </div>
       </div>

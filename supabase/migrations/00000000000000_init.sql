@@ -86,3 +86,49 @@ $$;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- Create services table
+CREATE TABLE IF NOT EXISTS services (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    budget DECIMAL(10,2),
+    location TEXT,
+    category TEXT,
+    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'completed', 'cancelled')),
+    client_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW()),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc', NOW())
+);
+
+-- Enable RLS
+ALTER TABLE services ENABLE ROW LEVEL SECURITY;
+
+-- Policies for services table
+CREATE POLICY "Enable read access for all authenticated users"
+    ON services FOR SELECT
+    TO authenticated
+    USING (true);
+
+CREATE POLICY "Enable insert for clients only"
+    ON services FOR INSERT
+    TO authenticated
+    WITH CHECK (
+        auth.uid() = client_id AND
+        EXISTS (
+            SELECT 1 FROM user_profiles
+            WHERE id = auth.uid()
+            AND user_type = 'client'
+        )
+    );
+
+CREATE POLICY "Enable update for service owner"
+    ON services FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = client_id)
+    WITH CHECK (auth.uid() = client_id);
+
+CREATE POLICY "Enable delete for service owner"
+    ON services FOR DELETE
+    TO authenticated
+    USING (auth.uid() = client_id);
