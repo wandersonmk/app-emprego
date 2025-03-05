@@ -8,6 +8,20 @@ Aplicativo para conectar profissionais e clientes.
 - Integração com Supabase para autenticação
 - Suporte para diferentes tipos de conta (cliente e profissional)
 
+## Funcionalidades
+
+- Sistema de registro de usuários com Supabase
+- Autenticação segura
+- Suporte para contas de cliente e profissional
+- Interface moderna e responsiva
+
+## Como executar
+
+1. Clone o repositório
+2. Instale as dependências com `npm install`
+3. Configure as variáveis do Supabase
+4. Execute com `npm run dev`
+
 ## Project info
 
 **URL**: https://lovable.dev/projects/7650931a-e9b2-47fe-b7fa-0ca689f5c80d
@@ -58,9 +72,7 @@ npm run dev
 - Click on "New codespace" to launch a new Codespace environment.
 - Edit files directly within the Codespace and commit and push your changes once you're done.
 
-## What technologies are used for this project?
-
-This project is built with .
+## Tecnologias
 
 - Vite
 - TypeScript
