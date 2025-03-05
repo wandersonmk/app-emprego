@@ -1,4 +1,12 @@
-# Welcome to your Lovable project
+# App Emprego
+
+Aplicativo para conectar profissionais e clientes.
+
+## Atualização
+
+- Implementado sistema de registro de usuários
+- Integração com Supabase para autenticação
+- Suporte para diferentes tipos de conta (cliente e profissional)
 
 ## Project info
 
